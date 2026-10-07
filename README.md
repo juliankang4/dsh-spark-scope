@@ -2,7 +2,7 @@
 
 A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that puts the Glance view of the [Spark Scope](https://github.com/juliankang4/spark-scope) mini window in the left sidebar, so you can keep an eye on your DGX Spark nodes and their model server while you work. It works in both the browser (`dsh web`) and the Desktop app.
 
-<p align="center"><img src="docs/card.png" alt="The card in light and dark themes, and collapsed to a single line" width="760"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/juliankang4/dsh-spark-scope/main/docs/card.png" alt="The card in light and dark themes, and collapsed to a single line" width="760"></p>
 
 ## Install
 
@@ -30,7 +30,7 @@ The button in the top right corner collapses the card to a single line with the 
 
 ## How it reads Spark Scope
 
-The plugin adds a `/plugins/dsh-spark-scope/state` route to the dsh web server. While the page is visible, the card requests it every 2 seconds, and dsh fetches `<address>/api/state` with a 5-second timeout. The plugin only reads data and never changes anything on Spark Scope or the nodes. The route uses the same sign-in and Host checks as dsh's own API, so only a signed-in dsh page can read it. dsh ignores any Spark Scope response larger than 2 MB. See dsh's [SAFETY.md](https://github.com/deepseek-ai/deepseek-harness/blob/main/SAFETY.md) for running dsh safely.
+The plugin adds a `/plugins/dsh-spark-scope/state` route to the dsh web server. While the page is visible, the card requests it every 2 seconds, and dsh fetches `<address>/api/state` with a 5-second timeout. The plugin only reads data and never changes anything on Spark Scope or the nodes. The route uses the same sign-in and Host checks as dsh's own API, so only a signed-in dsh page can read it. dsh ignores any Spark Scope response larger than 2 MB. See dsh's [SAFETY.md](https://github.com/deepseek-ai/deepseek-harness/blob/master/SAFETY.md) for running dsh safely.
 
 ## Configuration
 
