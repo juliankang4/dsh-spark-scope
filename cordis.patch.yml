@@ -1,0 +1,3 @@
+- insert:
+    - id: spark-scope
+      name: dsh-spark-scope

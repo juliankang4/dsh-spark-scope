@@ -1,0 +1,23 @@
+{
+  "name": "dsh-spark-scope",
+  "version": "0.1.0",
+  "description": "Spark Scope's mini window in the DeepSeek Harness sidebar: decode, prefill and every node at a glance",
+  "type": "module",
+  "license": "MIT",
+  "repository": "github:juliankang4/dsh-spark-scope",
+  "keywords": ["dsh-plugin", "dsh", "deepseek-harness", "spark-scope", "dgx-spark", "vllm", "sglang", "monitoring"],
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/index.js", "cordis.patch.yml"],
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
