@@ -1,6 +1,6 @@
 {
   "name": "dsh-spark-scope",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Spark Scope's mini window in the DeepSeek Harness sidebar: decode, prefill and every node at a glance",
   "type": "module",
   "license": "MIT",
