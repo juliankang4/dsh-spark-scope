@@ -2,8 +2,10 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 
 // tsc's "use strict" moves to the top of the factory, where it acts as a directive.
-const read = file => readFileSync(file, 'utf8').replace(/^"use strict";\n/, '')
-writeFileSync('lib/client.js', `window.__ModuleLoader__.load({
+const read = (file) => readFileSync(file, 'utf8').replace(/^"use strict";\n/, '')
+writeFileSync(
+  'lib/client.js',
+  `window.__ModuleLoader__.load({
   id: 'dsh-spark-scope',
   factory: (load) => {
     'use strict'
@@ -18,4 +20,5 @@ ${read('lib/client.cjs')}
     return module.exports
   },
 })
-`)
+`,
+)

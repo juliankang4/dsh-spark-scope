@@ -3,6 +3,8 @@
     "target": "es2023",
     "module": "nodenext",
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "skipLibCheck": true,
     "types": ["node"],
     "rootDir": "src",

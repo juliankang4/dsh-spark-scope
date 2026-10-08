@@ -2,9 +2,17 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
 // lib/client.js registers a factory with the dsh module loader; capture it to reach the exports.
-type Factory = (require: (id: string) => unknown) => Record<string, any>
+type Factory = (require: (id: string) => unknown) => { parseAddress: (text: string) => string | undefined }
 let factory: Factory | undefined
-Object.assign(globalThis, { window: { __ModuleLoader__: { load: (row: { factory: Factory }) => { factory = row.factory } } } })
+Object.assign(globalThis, {
+  window: {
+    __ModuleLoader__: {
+      load: (row: { factory: Factory }) => {
+        factory = row.factory
+      },
+    },
+  },
+})
 await import('../lib/client.js')
 const { parseAddress } = factory!(() => ({}))
 const { parseState, sampleOf, sparkPath, viewInference } = await import('../lib/glance.cjs')
@@ -19,7 +27,13 @@ test('address: adds http://, drops trailing slashes, keeps https and paths', () 
 })
 
 test('prefill counts only when new prefills completed since the previous sample', () => {
-  const v = { ok: true, outputTokensPerSecond: 60, promptComputeTokensPerSecond: 1800, promptTokensPerSecond: 47000, prefillUpdatedAt: '2026-10-07T00:00:10.000Z' }
+  const v = {
+    ok: true,
+    outputTokensPerSecond: 60,
+    promptComputeTokensPerSecond: 1800,
+    promptTokensPerSecond: 47000,
+    prefillUpdatedAt: '2026-10-07T00:00:10.000Z',
+  }
   const at = Date.parse('2026-10-07T00:00:11.000Z')
   assert.deepEqual(sampleOf(v, at, at - 2000), { at, decode: 60, prefill: 1800 })
   // The held rate after the prefill finished is not a new prefill.
@@ -31,15 +45,37 @@ test('prefill counts only when new prefills completed since the previous sample'
 })
 
 test('several servers add up rates and take the worst latency', () => {
-  const v = viewInference(parseState({
-    inference: { ok: true, modelName: 'a' },
-    servers: [
-      { name: 'one', inference: { ok: true, outputTokensPerSecond: 10, runningRequests: 1, kvCachePercent: 20, ttftP95RecentSeconds: 0.5, prefixCacheHitPercent: 90 } },
-      { name: null, inference: { ok: true, modelName: 'b', outputTokensPerSecond: 5, runningRequests: 2, kvCachePercent: 40, ttftP95RecentSeconds: 1.5 } },
-      { name: 'off', inference: { ok: false } },
-      null,
-    ],
-  }))
+  const v = viewInference(
+    parseState({
+      inference: { ok: true, modelName: 'a' },
+      servers: [
+        {
+          name: 'one',
+          inference: {
+            ok: true,
+            outputTokensPerSecond: 10,
+            runningRequests: 1,
+            kvCachePercent: 20,
+            ttftP95RecentSeconds: 0.5,
+            prefixCacheHitPercent: 90,
+          },
+        },
+        {
+          name: null,
+          inference: {
+            ok: true,
+            modelName: 'b',
+            outputTokensPerSecond: 5,
+            runningRequests: 2,
+            kvCachePercent: 40,
+            ttftP95RecentSeconds: 1.5,
+          },
+        },
+        { name: 'off', inference: { ok: false } },
+        null,
+      ],
+    }),
+  )
   assert.equal(v.modelName, 'one | b')
   assert.equal(v.outputTokensPerSecond, 15)
   assert.equal(v.runningRequests, 3)
