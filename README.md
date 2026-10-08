@@ -53,4 +53,6 @@ Use Node.js 24. Install dependencies with `npm ci`. Run `npm run check` for form
 
 Type suppressions must use `@ts-expect-error: <reason>`. Inline lint suppressions must name one rule: `biome-ignore lint/<group>/<rule>: <reason>`. Blanket and file-wide lint suppressions are rejected. Non-null assertions remain allowed where TypeScript cannot follow an existing guard. The npm-generated lockfile is not reformatted.
 
+Pull requests and pushes to `main` run the same check and test commands. The `CI passed` summary succeeds only when both jobs succeed; failed, cancelled and skipped jobs fail the summary.
+
 Tested with dsh 0.2.0-rc.2 (in Chrome and in the macOS Desktop app) and Spark Scope 0.1.3.
