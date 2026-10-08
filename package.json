@@ -39,6 +39,7 @@
     }
   },
   "scripts": {
+    "check": "biome check --error-on-warnings . && node scripts/check.mjs && tsc --noEmit",
     "build": "tsc && node scripts/bundle-client.mjs",
     "pretest": "npm run build",
     "test": "node --test",
@@ -48,6 +49,7 @@
     "@deepseek-ai/schemastery": "*"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.1",
     "@deepseek-ai/cordis": "4.0.4",
     "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2",
     "@deepseek-ai/dsh-client-locale": "0.2.0-rc.2",
