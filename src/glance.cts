@@ -71,7 +71,6 @@ const MAX_HISTORY = 2000
 const MAX_NODES = 64
 const MAX_SERVERS = 16
 
-/** Label and help locale keys per field, as Spark Scope's ENGINE_LABELS. */
 const LABELS = {
   outputTokensPerSecond: 'decode',
   averageOutputTokensPerSecond: 'decodeMean',
@@ -288,7 +287,7 @@ export function engineMetric(v: Inference | null, field: MetricKey, averages = t
 
 /**
  * The figure a metric shows from a live reading, null when hidden. A Spark Scope 0.1.3 reading falls back from
- * computed prompt tokens to all prompt tokens, as the card did before.
+ * computed prompt tokens to all prompt tokens.
  */
 export function metricValue(v: Inference | null, metric: Metric): number | null {
   if (!v?.ok || !metric.shown) return null
