@@ -22,7 +22,13 @@ The data is fetched by dsh, not by your browser, so the address has to work from
 
 ## The card
 
-The card sits at the bottom of the sidebar, above other footer items such as the dsh-cost-meter balance. The top of the card shows the model name, how many nodes are responding, and the decode and prefill rates with five-minute sparklines. Below that are running and queued requests, KV cache usage, TTFT and TPOT p95 for the last five minutes and the prefix cache hit rate, followed by a row for each node with its GPU temperature, power draw, load and memory use. If you run more than one model server, the card shows their combined rates and requests, like Spark Scope's "All at once" view.
+The card sits at the bottom of the sidebar, above other footer items such as the dsh-cost-meter balance. The top of the card shows the model name, how many nodes are responding, and the decode and prefill rates with five-minute sparklines. Below that are running and queued requests, KV cache usage, TTFT and TPOT p95 for the last five minutes and the prefix cache hit rate, followed by a row for each node with its GPU temperature, power draw, load and GPU memory use. With more than four nodes, the rows fill two columns.
+
+The card shows only the figures your inference engine reports, under the same labels Spark Scope uses. oMLX reports mean decode and prefill rates since the server started, so the card shows those without sparklines. llama.cpp reports mean decode time in place of TPOT and context use in place of KV cache. When Spark Scope needs an API key to read oMLX, the card says so.
+
+If you run more than one model server, the card adds up their rates and requests, like Spark Scope's "All at once" view, and lists each server with its decode rate and state. A note such as "(servers 1/2)" means only some of the servers report that rate.
+
+Memory on a discrete GPU is labeled VRAM. Mac nodes have no GPU temperature or power reading, so their rows leave them out, and the GPU power total says how many nodes it covers, for example "(5/6 nodes)".
 
 The dot next to the model name is green when Spark Scope reports the cluster as healthy and orange for any other status. It turns red if Spark Scope stops responding or its data is more than 20 seconds old. A dash (`—`) means Spark Scope has no reading for that value.
 
@@ -55,4 +61,4 @@ Type suppressions must use `@ts-expect-error: <reason>`. Inline lint suppression
 
 Pull requests and pushes to `main` run the same check and test commands. The `CI passed` summary succeeds only when both jobs succeed; failed, cancelled and skipped jobs fail the summary.
 
-Tested with dsh 0.2.0-rc.2 (in Chrome and in the macOS Desktop app) and Spark Scope 0.1.3.
+Tested with dsh 0.2.0-rc.2 in Chrome and in the macOS Desktop app, using sample data in the state format of Spark Scope 0.1.4 and of the older 0.1.3.

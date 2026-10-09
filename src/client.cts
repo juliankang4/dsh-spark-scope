@@ -7,16 +7,28 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import { createElement as h, useEffect, useId, useRef, useState } from 'react'
 import {
   duration,
+  engineMetric,
+  engineNeedsKey,
   finite,
   fixed,
   gib,
+  gpuMemory,
+  gpuPowerWatts,
+  hasNodeTemperature,
   historySamples,
+  memoryWording,
   parseState,
-  prefillRate,
+  metricValue,
   rate,
+  rateCoverage,
   sampleOf,
+  serverName,
+  serverState,
   sparkPath,
   viewInference,
+  type Inference,
+  type Metric,
+  type MetricKey,
   type Sample,
   type State,
 } from './glance.cjs'
@@ -37,15 +49,61 @@ const en = {
   offline: 'Not responding',
   invalid: 'The Spark Scope address in Settings is not an http or https address.',
   noModel: 'No model',
+  mean: 'mean',
+  apiKey: 'API key required',
   decode: 'Decode',
   prefill: 'Prefill',
+  decode2s: 'Decode (2 s)',
+  prefill2s: 'Prefill (2 s)',
+  decodeMean: 'Mean decode',
+  prefillMean: 'Mean prefill',
+  serversPartial: '(servers {reporting}/{count})',
   running: 'Running',
   queue: 'Queue',
+  kv: 'KV',
+  contextUsed: 'Context used',
+  noRequests: 'no requests',
+  ttft: 'TTFT',
+  tpot: 'TPOT',
+  meanDecode: 'Mean decode time',
   cacheHit: 'Cache hit',
+  cacheHitSinceStart: 'Cache hit since start',
+  total: 'Total',
+  serving: 'serving',
+  idle: 'idle',
+  down: 'not responding',
+  checking: 'checking',
   gpuLoad: 'GPU load',
   mem: 'MEM',
+  vram: 'VRAM',
   gpuPower: 'GPU power',
+  powerPartial: '({reporting}/{count} nodes)',
   mostMemory: 'Most memory used',
+  mostGpuMemory: 'Most GPU memory used',
+  helpCacheHit: 'The share of prompt tokens served from the prefix cache, counted since the engine started.',
+  helpTtft: 'Time to first token: the 95th percentile over the requests that finished in the last 5 minutes.',
+  helpTpot: 'Time per output token: the 95th percentile over the requests that finished in the last 5 minutes.',
+  helpMeanDecode:
+    'Average time to generate an output token. Lower means faster replies. Calculated from generation time and token increases between collections, and held until another generation completes. The first token adds to the count but not the time, so this is not a mean token gap or p95.',
+  helpCacheHitSinceStart:
+    'Since the engine started: reused prompt tokens divided by computed plus reused prompt tokens. The counters update at different times during a request.',
+  helpContextUsed:
+    'The share of the context window used by active requests. Unlike vLLM KV cache usage, this measures token capacity, not occupied cache memory.',
+  helpPrefill2s:
+    'Prompt tokens computed per second during the last prompt pass. TensorFold keeps this rate for two seconds, then reports zero.',
+  helpDecode2s: 'Output tokens generated per second over the last two seconds.',
+  helpPrefillMean:
+    'Computed prompt tokens divided by prefill time for completed requests since the server started. Cached tokens and idle time are excluded. This is a session average, not a live rate.',
+  helpDecodeMean:
+    'Output tokens divided by generation time for completed requests since the server started. Idle time is excluded. This is a session average, not a live rate.',
+  helpStrataPrefill:
+    'While a request runs, its reported prompt-reading rate. Otherwise, the rate from the latest completed requests is kept.',
+  helpTtftQueueExcluded:
+    'TTFT p95 over finished requests in the last 5 minutes. Queue and model-load time are excluded.',
+  helpTpotTokenWeighted:
+    "Token-weighted p95 of each finished request's mean inter-token gap, over the last 5 minutes. It is not a percentile of individual token gaps.",
+  helpTpotRequestMean:
+    "P95 of each finished reply's mean gap between output tokens, over the last 5 minutes. One-token replies are omitted.",
   collapse: 'Collapse Spark Scope',
   expand: 'Expand Spark Scope',
   nav: 'Spark Scope',
@@ -63,15 +121,57 @@ const zh: Record<Key, string> = {
   offline: '无响应',
   invalid: '设置中的 Spark Scope 地址不是 http 或 https 地址。',
   noModel: '无模型',
+  mean: '平均',
+  apiKey: '需要 API 密钥',
   decode: 'Decode',
   prefill: 'Prefill',
+  decode2s: 'Decode (2 秒)',
+  prefill2s: 'Prefill (2 秒)',
+  decodeMean: '平均 Decode',
+  prefillMean: '平均 Prefill',
+  serversPartial: '(服务器 {reporting}/{count})',
   running: '运行中',
   queue: '队列',
+  kv: 'KV',
+  contextUsed: '上下文占用',
+  noRequests: '无请求',
+  ttft: 'TTFT',
+  tpot: 'TPOT',
+  meanDecode: '平均 Decode 时间',
   cacheHit: '缓存命中',
+  cacheHitSinceStart: '启动以来缓存命中',
+  total: '合计',
+  serving: '服务中',
+  idle: '空闲',
+  down: '无响应',
+  checking: '检查中',
   gpuLoad: 'GPU 负载',
   mem: '内存',
+  vram: 'VRAM',
   gpuPower: 'GPU 功耗',
+  powerPartial: '({reporting}/{count} 个节点)',
   mostMemory: '最高内存',
+  mostGpuMemory: '最高 GPU 内存',
+  helpCacheHit: '自引擎启动以来，从前缀缓存取得的提示词 token 所占比例。',
+  helpTtft: '首个 token 的等待时间：最近 5 分钟内完成的请求的 p95。',
+  helpTpot: '每个输出 token 的耗时：最近 5 分钟内完成的请求的 p95。',
+  helpMeanDecode:
+    '生成一个输出 token 的平均时间，越短回复越快。按两次采集之间增加的生成时间和 token 数计算，并保持到下一次生成完成。首个 token 只计入数量、不计入时间，所以它不是平均 token 间隔，也不是 p95。',
+  helpCacheHitSinceStart:
+    '自引擎启动以来：复用的提示词 token 除以计算和复用的提示词 token 之和。请求进行中，两个计数器的更新时间可能不同。',
+  helpContextUsed:
+    '进行中的请求占用上下文窗口的比例。与 vLLM 的 KV 缓存使用率不同，它按 token 容量计算，而不是已占用的缓存内存。',
+  helpPrefill2s: '最近一次处理提示词时每秒计算的 token 数。TensorFold 会把这个速率保持两秒，然后报告为零。',
+  helpDecode2s: '最近两秒内每秒生成的输出 token 数。',
+  helpPrefillMean:
+    '自服务器启动以来，已完成请求中计算的提示词 token 数除以 prefill 时间，不含缓存 token 和空闲时间。这是会话平均值，不是实时速率。',
+  helpDecodeMean:
+    '自服务器启动以来，已完成请求的输出 token 数除以生成时间，不含空闲时间。这是会话平均值，不是实时速率。',
+  helpStrataPrefill: '请求进行中时显示它报告的提示词读取速率，否则保留最近完成的请求的速率。',
+  helpTtftQueueExcluded: '最近 5 分钟内完成的请求的 TTFT p95，不含排队和模型加载时间。',
+  helpTpotTokenWeighted:
+    '最近 5 分钟内，各个已完成请求的平均 token 间隔按 token 数加权后的 p95。它不是单个 token 间隔的百分位。',
+  helpTpotRequestMean: '最近 5 分钟内，每个已完成回复的平均输出 token 间隔的 p95。只有一个 token 的回复不计入。',
   collapse: '收起 Spark Scope',
   expand: '展开 Spark Scope',
   nav: 'Spark Scope',
@@ -88,15 +188,59 @@ const ko: Record<Key, string> = {
   offline: '응답 없음',
   invalid: '설정의 Spark Scope 주소가 http 또는 https 주소가 아닙니다.',
   noModel: '모델 없음',
+  mean: '평균',
+  apiKey: 'API 키 필요',
   decode: 'Decode',
   prefill: 'Prefill',
+  decode2s: 'Decode (2초)',
+  prefill2s: 'Prefill (2초)',
+  decodeMean: '평균 Decode',
+  prefillMean: '평균 Prefill',
+  serversPartial: '(서버 {reporting}/{count})',
   running: '실행 중',
   queue: '대기열',
+  kv: 'KV',
+  contextUsed: '컨텍스트 사용률',
+  noRequests: '요청 없음',
+  ttft: 'TTFT',
+  tpot: 'TPOT',
+  meanDecode: '평균 Decode 시간',
   cacheHit: '캐시 적중',
+  cacheHitSinceStart: '캐시 적중률 (엔진 시작 이후)',
+  total: '합계',
+  serving: '서빙 중',
+  idle: '유휴',
+  down: '응답 없음',
+  checking: '확인 중',
   gpuLoad: 'GPU 사용률',
   mem: '메모리',
+  vram: 'VRAM',
   gpuPower: 'GPU 전력',
+  powerPartial: '(노드 {reporting}/{count})',
   mostMemory: '최대 메모리',
+  mostGpuMemory: '최대 GPU 메모리',
+  helpCacheHit: '엔진 시작 이후 프롬프트 토큰 중 prefix cache에서 가져온 비율입니다.',
+  helpTtft: '첫 토큰이 나오기까지 걸린 시간입니다. 최근 5분 동안 완료된 요청 기준 p95 값입니다.',
+  helpTpot: '출력 토큰 하나당 걸린 시간입니다. 최근 5분 동안 완료된 요청 기준 p95 값입니다.',
+  helpMeanDecode:
+    '출력 토큰 하나를 생성하는 데 걸린 평균 시간입니다. 짧을수록 응답이 빠릅니다. 수집 사이에 늘어난 생성 시간과 토큰 수로 계산하며 다음 생성이 완료될 때까지 유지합니다. 첫 토큰은 개수에만 포함되므로 평균 토큰 간격이나 p95와는 다릅니다.',
+  helpCacheHitSinceStart:
+    '엔진 시작 이후 계산한 프롬프트 토큰과 재사용한 토큰의 합에서 재사용한 토큰의 비율입니다. 요청 처리 중에는 두 카운터의 갱신 시점이 다를 수 있습니다.',
+  helpContextUsed:
+    '처리 중인 요청이 컨텍스트 한도에서 차지하는 비율입니다. vLLM의 KV 캐시 사용률과 달리 메모리가 아닌 토큰 수 기준입니다.',
+  helpPrefill2s:
+    '마지막 프롬프트 처리 중 초당 계산한 토큰 수입니다. TensorFold는 이 값을 2초간 유지한 뒤 0을 보고합니다.',
+  helpDecode2s: '최근 2초 동안 초당 생성한 출력 토큰 수입니다.',
+  helpPrefillMean:
+    '서버 시작 이후 완료된 요청에서 계산한 프롬프트 토큰 수를 입력 처리 시간으로 나눈 값입니다. 캐시 재사용 토큰과 유휴 시간은 제외합니다. 실시간 속도가 아닌 세션 평균입니다.',
+  helpDecodeMean:
+    '서버 시작 이후 완료된 요청의 출력 토큰 수를 생성 시간으로 나눈 값입니다. 유휴 시간은 제외합니다. 실시간 속도가 아닌 세션 평균입니다.',
+  helpStrataPrefill:
+    '요청 처리 중에는 해당 요청의 프롬프트 읽기 속도를 표시합니다. 그 외에는 최근 완료된 요청에서 계산한 속도를 유지합니다.',
+  helpTtftQueueExcluded: '최근 5분 동안 완료된 요청의 TTFT p95입니다. 대기 시간과 모델 로딩 시간은 제외합니다.',
+  helpTpotTokenWeighted:
+    '최근 5분 동안 완료된 요청마다 평균 토큰 간격을 구한 뒤 토큰 수로 가중한 p95입니다. 개별 토큰 간격의 p95는 아닙니다.',
+  helpTpotRequestMean: '최근 5분 동안 완료된 응답별 평균 출력 토큰 간격의 p95입니다. 토큰이 하나인 응답은 제외합니다.',
   collapse: 'Spark Scope 접기',
   expand: 'Spark Scope 펼치기',
   nav: 'Spark Scope',
@@ -151,7 +295,8 @@ body[data-ds-dark-theme] .dsp-card{--paper:#1c1c1f;--ink:#f2f2f4;--muted:#a1a1aa
 .dsp-card[data-collapsed] .dsp-toggle svg{transform:rotate(180deg)}
 .dsp-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .dsp-metric{min-width:0}
-.dsp-metric small{display:block;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.dsp-metric small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.dsp-cover{display:block;min-height:1lh;font-size:9px;color:var(--muted)}
 .dsp-metric b{font-size:22px;font-weight:650;line-height:1.1;letter-spacing:-.5px;white-space:nowrap}
 .dsp-metric em{margin-left:3px;font-size:10px;font-style:normal;font-weight:500;letter-spacing:0;color:var(--muted)}
 .dsp-spark{display:block;width:100%;height:22px}
@@ -159,11 +304,22 @@ body[data-ds-dark-theme] .dsp-card{--paper:#1c1c1f;--ink:#f2f2f4;--muted:#a1a1aa
 .dsp-chips b{color:var(--ink);font-weight:600}
 .dsp-spread{justify-content:space-between}
 .dsp-rule{border-top:1px solid var(--line)}
+.dsp-servers{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:2px 10px;align-items:center;font-size:11px}
+.dsp-servers>div{display:contents}
+.dsp-servers>div>span:not(.dsp-name){text-align:right;white-space:nowrap}
+.dsp-servers .dsp-serving{color:color-mix(in srgb,var(--green) 70%,var(--ink))}.dsp-servers .dsp-down{color:var(--red)}.dsp-servers .dsp-idle,.dsp-servers .dsp-checking{color:var(--muted)}
+.dsp-total>span{padding-top:3px;border-top:1px solid var(--line);font-weight:600}
 .dsp-nodes{display:grid;gap:8px}
+.dsp-nodes.dsp-two{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px}
+.dsp-two .dsp-l1{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 1lh;gap:1px 6px}
+.dsp-two .dsp-l1>span:nth-child(2){text-align:left}
+.dsp-two .dsp-name{grid-column:1/-1}
+.dsp-two .dsp-l2{gap:4px}
 .dsp-node{display:grid;gap:4px;font-size:11px}
 .dsp-l1{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
 .dsp-l1>span:not(.dsp-name){text-align:right;white-space:nowrap}
 .dsp-name{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
+.dsp-name>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .dsp-name i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--node)}
 .dsp-l2{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px;align-items:center;font-size:9px;letter-spacing:.5px;color:var(--muted)}
 .dsp-bar{position:relative;display:block;height:6px;border-radius:999px;background:var(--meter);overflow:hidden}
@@ -282,25 +438,33 @@ function Glance({ t }: Pick<CardProps, 't'>) {
   const live = v?.ok ? v : null
   const nodes = state?.nodes ?? {}
   const metas = state?.order ?? []
+  const servers = state?.servers ?? []
   const online = metas.filter((meta) => nodes[meta.id]?.ok).length
   const updated = Date.parse(state?.updatedAt ?? '')
   const offline = error !== null || !(at - updated < STALE_MS)
   const tone = offline ? 'dsp-crit' : state?.status === 'healthy' ? 'dsp-ok' : 'dsp-warn'
   const now = Number.isFinite(updated) ? updated : at
+  const decode = engineMetric(v, 'outputTokensPerSecond')
+  const prefill = engineMetric(v, 'promptComputeTokensPerSecond')
+  const decodeValue = metricValue(v, decode)
+  const needsKey = engineNeedsKey(v)
 
   const head = h(
     'div',
     { className: 'dsp-head' },
     h('span', { className: `dsp-dot ${tone}` }),
     h('b', { title: live?.modelName ?? '' }, live?.modelName || t('noModel')),
-    collapsed && !offline
-      ? h(
-          'span',
-          { className: 'dsp-now' },
-          rate(live?.outputTokensPerSecond ?? null),
-          h('span', { className: 'dsp-note' }, ' tok/s'),
-        )
-      : h('span', { className: tone }, offline ? t('offline') : t('nodesUp', { online, count: metas.length })),
+    collapsed && !offline && needsKey
+      ? h('span', { className: 'dsp-warn' }, t('apiKey'))
+      : collapsed && !offline && decode.shown
+        ? h(
+            'span',
+            { className: 'dsp-now', title: t(decode.label) },
+            decode.average && h('span', { className: 'dsp-note' }, `${t('mean')} `),
+            rate(decodeValue),
+            h('span', { className: 'dsp-note' }, ' tok/s'),
+          )
+        : h('span', { className: tone }, offline ? t('offline') : t('nodesUp', { online, count: metas.length })),
     h(
       'button',
       {
@@ -316,77 +480,118 @@ function Glance({ t }: Pick<CardProps, 't'>) {
   )
   if (collapsed) return h('div', { className: 'dsp-card', 'data-collapsed': '' }, head)
 
-  const metric = (label: string, value: string, key: 'decode' | 'prefill', stroke: string) =>
+  const coverage = (field: MetricKey) => {
+    const partial = rateCoverage(servers, field)
+    return partial ? t('serversPartial', partial) : ''
+  }
+  const reserveCoverLine = servers.length > 1
+  const metric = (m: Metric, key: 'decode' | 'prefill', stroke: string) =>
     h(
       'div',
-      { className: 'dsp-metric' },
-      h('small', null, label),
-      h('b', null, value, h('em', null, 'tok/s')),
-      h(
-        'svg',
-        { className: 'dsp-spark', viewBox: '0 0 300 30', preserveAspectRatio: 'none', 'aria-hidden': true },
-        h('path', {
-          d: sparkPath(samples, key, now, SPARK_MS),
-          fill: 'none',
-          stroke,
-          strokeWidth: 1.6,
-          vectorEffect: 'non-scaling-stroke',
-        }),
-      ),
+      { className: 'dsp-metric', title: m.help && t(m.help) },
+      h('small', null, t(m.label)),
+      reserveCoverLine && h('span', { className: 'dsp-cover' }, m.average ? '' : coverage(m.key)),
+      h('b', null, rate(metricValue(v, m)), h('em', null, 'tok/s')),
+      !m.average &&
+        h(
+          'svg',
+          { className: 'dsp-spark', viewBox: '0 0 300 30', preserveAspectRatio: 'none', 'aria-hidden': true },
+          h('path', {
+            d: sparkPath(samples, key, now, SPARK_MS),
+            fill: 'none',
+            stroke,
+            strokeWidth: 1.6,
+            vectorEffect: 'non-scaling-stroke',
+          }),
+        ),
     )
-  const chip = (label: string, value: string) => h('span', { key: label }, `${label} `, h('b', null, value))
-  const readings = metas.map((meta) => nodes[meta.id]).filter((node) => node?.ok)
-  const watts = readings
-    .map((node) => node.gpu.powerWatts)
-    .filter(finite)
-    .reduce((sum, w) => sum + w, 0)
-  const fullest = readings
-    .filter((node) => finite(node.memory.usedBytes) && finite(node.memory.totalBytes) && node.memory.totalBytes > 0)
-    .sort(
-      (a, b) => percent(b.memory.usedBytes, b.memory.totalBytes) - percent(a.memory.usedBytes, a.memory.totalBytes),
-    )[0]
+  const chip = (label: string, value: string, title?: string) =>
+    h('span', { key: label, title }, `${label} `, h('b', null, value))
+  const engineChip = (field: MetricKey) => {
+    const m = engineMetric(v, field)
+    if (!m.shown) return null
+    const reading = live?.[m.key] ?? null
+    const value = m.idle ? t('noRequests') : m.key.endsWith('Seconds') ? duration(reading) : fixed(reading, 0, '%')
+    return chip(t(m.label), value, m.help && t(m.help))
+  }
+  const color = (index: number) => `var(--${NODE_COLORS[index % NODE_COLORS.length]})`
+  const unreported = (reading: Inference | null) => reading?.reported.outputTokensPerSecond === false
+
+  const readings = metas.map((meta) => nodes[meta.id])
+  const watts = gpuPowerWatts(readings)
+  const reporting = readings.filter((node) => node?.ok && finite(node.gpu.powerWatts)).length
+  const memories = readings.map(gpuMemory)
+  const wording = memoryWording(memories.map((memory) => memory.kind))
+  const fullest = memories
+    .filter((memory) => finite(memory.used) && finite(memory.total) && memory.total > 0)
+    .sort((a, b) => percent(b.used, b.total) - percent(a.used, a.total))[0]
 
   return h(
     'div',
     { className: 'dsp-card' },
     head,
-    h(
-      'div',
-      { className: 'dsp-pair' },
-      metric(t('decode'), rate(live?.outputTokensPerSecond ?? null), 'decode', 'var(--blue)'),
-      metric(t('prefill'), rate(prefillRate(live)), 'prefill', 'var(--orange)'),
-    ),
+    needsKey && h('div', { className: 'dsp-note' }, t('apiKey')),
+    (decode.shown || prefill.shown) &&
+      h(
+        'div',
+        { className: 'dsp-pair' },
+        decode.shown && metric(decode, 'decode', 'var(--blue)'),
+        prefill.shown && metric(prefill, 'prefill', 'var(--orange)'),
+      ),
     h(
       'div',
       { className: 'dsp-chips' },
       chip(t('running'), fixed(live?.runningRequests ?? null, 0)),
       chip(t('queue'), fixed(live?.waitingRequests ?? null, 0)),
-      chip('KV', fixed(live?.kvCachePercent ?? null, 0, '%')),
-      chip('TTFT', duration(live?.ttftP95RecentSeconds ?? null)),
-      chip('TPOT', duration(live?.tpotP95RecentSeconds ?? null)),
-      chip(t('cacheHit'), fixed(live?.prefixCacheHitPercent ?? null, 0, '%')),
+      engineChip('kvCachePercent'),
+      engineChip('ttftP95RecentSeconds'),
+      engineChip('tpotP95RecentSeconds'),
+      engineChip('prefixCacheHitPercent'),
     ),
+    servers.length > 1 &&
+      h(
+        'div',
+        { className: 'dsp-servers' },
+        servers.map((server, index) => {
+          const own = server.inference
+          const name = serverName(server)
+          const status = serverState(server)
+          const first = metas.findIndex((meta) => meta.id === server.nodes[0])
+          return h(
+            'div',
+            { key: server.id ?? index, style: { '--node': color(Math.max(0, first)) } },
+            h('span', { className: 'dsp-name', title: name }, h('i'), h('span', null, name)),
+            h('span', null, unreported(own) ? '' : `${rate(own?.ok ? own.outputTokensPerSecond : null)} tok/s`),
+            h('span', { className: `dsp-${status}` }, t(engineNeedsKey(own) ? 'apiKey' : status)),
+          )
+        }),
+        h(
+          'div',
+          { className: 'dsp-total' },
+          h('span', null, `${t('total')} ${coverage('outputTokensPerSecond')}`.trim()),
+          h('span', null, unreported(v) ? '' : `${rate(v?.outputTokensPerSecond ?? null)} tok/s`),
+          h('span'),
+        ),
+      ),
     h('div', { className: 'dsp-rule' }),
     h(
       'div',
-      { className: 'dsp-nodes' },
+      { className: metas.length > 4 ? 'dsp-nodes dsp-two' : 'dsp-nodes' },
       metas.map((meta, index) => {
         const node = nodes[meta.id]
         const gpu = node?.ok ? node.gpu : { utilization: null, temperature: null, powerWatts: null }
-        const memory = node?.ok ? node.memory : { usedBytes: null, totalBytes: null }
+        const { kind, used, total } = memories[index]!
         return h(
           'div',
-          {
-            key: meta.id,
-            className: 'dsp-node',
-            style: { '--node': `var(--${NODE_COLORS[index % NODE_COLORS.length]})` },
-          },
+          { key: meta.id, className: 'dsp-node', style: { '--node': color(index) } },
           h(
             'div',
             { className: 'dsp-l1' },
-            h('span', { className: 'dsp-name', title: meta.name }, h('i'), meta.name),
-            h('span', { className: heat(gpu.temperature) }, fixed(gpu.temperature, 0, '°C')),
-            h('span', null, fixed(gpu.powerWatts, 1, ' W')),
+            h('span', { className: 'dsp-name', title: meta.name }, h('i'), h('span', null, meta.name)),
+            hasNodeTemperature(node) && [
+              h('span', { key: 'temp', className: heat(gpu.temperature) }, fixed(gpu.temperature, 0, '°C')),
+              h('span', { key: 'power' }, fixed(gpu.powerWatts, 1, ' W')),
+            ],
           ),
           h(
             'div',
@@ -397,11 +602,14 @@ function Glance({ t }: Pick<CardProps, 't'>) {
               { className: 'dsp-bar', title: `${t('gpuLoad')} ${fixed(gpu.utilization, 0, '%')}` },
               h('i', { style: { width: `${percent(gpu.utilization, 100).toFixed(0)}%` } }),
             ),
-            h('span', null, t('mem')),
+            h('span', null, t(kind === 'discrete' ? 'vram' : 'mem')),
             h(
               'span',
-              { className: 'dsp-bar dsp-mem', title: `${gib(memory.usedBytes)} / ${gib(memory.totalBytes, 0)} GiB` },
-              h('i', { style: { width: `${percent(memory.usedBytes, memory.totalBytes).toFixed(0)}%` } }),
+              {
+                className: 'dsp-bar dsp-mem',
+                title: finite(used) && finite(total) ? `${gib(used)} / ${gib(total, 0)} GiB` : undefined,
+              },
+              h('i', { style: { width: `${percent(used, total).toFixed(0)}%` } }),
             ),
           ),
         )
@@ -410,10 +618,17 @@ function Glance({ t }: Pick<CardProps, 't'>) {
     h(
       'div',
       { className: 'dsp-chips dsp-spread' },
-      chip(t('gpuPower'), `${fixed(watts)} W`),
+      watts !== null &&
+        h(
+          'span',
+          { key: 'power' },
+          `${t('gpuPower')} `,
+          h('b', null, `${fixed(watts)} W`),
+          reporting < metas.length ? ` ${t('powerPartial', { reporting, count: metas.length })}` : null,
+        ),
       chip(
-        t('mostMemory'),
-        fullest ? `${gib(fullest.memory.usedBytes)} / ${gib(fullest.memory.totalBytes, 0)} GiB` : '—',
+        t(wording === 'unified' ? 'mostMemory' : 'mostGpuMemory'),
+        fullest ? `${gib(fullest.used)} / ${gib(fullest.total, 0)} GiB` : '—',
       ),
     ),
   )
