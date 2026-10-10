@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.3
 
 - Update the pinned dsh development packages to 0.2.1-alpha.2.
 
