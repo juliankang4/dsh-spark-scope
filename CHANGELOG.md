@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Update the pinned dsh development packages to 0.2.1-alpha.2.
+
 ## 0.0.2
 
 - Add `npm run check` for formatting, lint and language checks.
