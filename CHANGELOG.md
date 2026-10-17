@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.4
 
 - Update the pinned dsh development packages to 0.2.1-rc.2.
 - Reword the note shown when Settings cannot save the address, since newer dsh releases let any signed-in page save it.
