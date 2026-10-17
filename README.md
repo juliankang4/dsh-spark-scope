@@ -16,7 +16,7 @@ You also need a running Spark Scope server. See its [installation guide](https:/
 
 ## Set up
 
-Open the Spark Scope tab in Settings, type your Spark Scope dashboard's address and press Enter. Both a local network address like `http://spark-scope.local:8787` and a tailnet address like `https://spark-scope.example.ts.net` work. If you leave out the scheme, `http://` is added for you. Clear the field to hide the card. The address can only be changed on the computer that runs dsh; a page opened from another computer shows the field but cannot save it.
+Open the Spark Scope tab in Settings, type your Spark Scope dashboard's address and press Enter. Both a local network address like `http://spark-scope.local:8787` and a tailnet address like `https://spark-scope.example.ts.net` work. If you leave out the scheme, `http://` is added for you. Clear the field to hide the card. If dsh does not let the page you opened save settings, the field is disabled with a note; dsh 0.2.0 allows it only on the computer that runs dsh.
 
 The data is fetched by dsh, not by your browser, so the address has to work from the computer that runs dsh. Spark Scope only answers requests made to localhost, an IP address or its own host name. To use any other name, such as a reverse proxy's, add it to `SPARK_SCOPE_ALLOWED_HOSTS` on the Spark Scope server.
 

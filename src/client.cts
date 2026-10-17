@@ -113,7 +113,7 @@ const en = {
   settingInput: 'Spark Scope address',
   settingBad: 'Enter an http or https address.',
   settingFailed: 'The address could not be saved.',
-  settingReadOnly: 'Settings can only be changed on the computer that runs dsh.',
+  settingReadOnly: 'Settings cannot be saved from this page.',
 }
 type Key = keyof typeof en
 const zh: Record<Key, string> = {
@@ -181,7 +181,7 @@ const zh: Record<Key, string> = {
   settingInput: 'Spark Scope 地址',
   settingBad: '请输入 http 或 https 地址。',
   settingFailed: '地址未能保存。',
-  settingReadOnly: '只能在运行 dsh 的电脑上更改设置。',
+  settingReadOnly: '无法在此页面保存设置。',
 }
 const ko: Record<Key, string> = {
   nodesUp: '노드 {online}/{count}',
@@ -250,7 +250,7 @@ const ko: Record<Key, string> = {
   settingInput: 'Spark Scope 주소',
   settingBad: 'http 또는 https 주소를 입력하세요.',
   settingFailed: '주소를 저장하지 못했습니다.',
-  settingReadOnly: '설정은 dsh를 실행하는 컴퓨터에서만 바꿀 수 있습니다.',
+  settingReadOnly: '이 페이지에서는 설정을 저장할 수 없습니다.',
 }
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -655,7 +655,6 @@ type SectionProps = PropsRuntime<'settings.section'> & PropsLocale<'spark-scope'
 /** The Spark Scope page in Settings: the address field. */
 function AddressSection({ t, useSettings, setAddress }: SectionProps) {
   const address = useSettings((s) => s.value?.url ?? '')
-  // Pages opened from another computer keep settings in memory only and cannot save them.
   const status = useSettings((s) =>
     s.status === 'loading' ? 'loading' : s.status === 'ready' && s.writable ? 'writable' : 'readOnly',
   )
