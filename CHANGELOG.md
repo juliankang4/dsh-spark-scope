@@ -4,6 +4,7 @@
 
 - Update the pinned dsh development packages to 0.2.1-rc.2.
 - Reword the note shown when Settings cannot save the address, since newer dsh releases let any signed-in page save it.
+- Follow the dsh light and dark theme through the page's color scheme.
 
 ## 0.0.3
 

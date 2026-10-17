@@ -277,11 +277,11 @@ export function parseAddress(text: string): string | undefined {
 }
 
 // Spark Scope's Soft design: its light and dark palettes, rounded card, pill bars. Sizes are in px, so dsh-ui-scale's
-// zoom scales the card with the rest of the page.
+// zoom scales the card with the rest of the page. light-dark() follows the CSS color-scheme dsh sets on the page for
+// its theme; without one the card stays light.
 const css = `
-.dsp-card{--paper:#fff;--ink:#1c1e22;--muted:#6b7280;--line:#e4e6ea;--meter:#eceef2;--hover:#f1f3f6;--blue:#2563eb;--orange:#ea580c;--green:#059669;--red:#dc2626;--purple:#7c3aed;--gold:#a16207;--magenta:#db2777;--umber:#92745c;
-  order:-2;flex:1 0 100%;box-sizing:border-box;min-width:0;margin:0 0 8px;padding:10px 12px;border-radius:14px;background:var(--paper);color:var(--ink);box-shadow:0 1px 2px #0000000f,0 4px 16px #00000008;font-size:12px;line-height:1.35;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:9px}
-body[data-ds-dark-theme] .dsp-card{--paper:#1c1c1f;--ink:#f2f2f4;--muted:#a1a1aa;--line:#2b2b30;--meter:#2a2a2f;--hover:#26262a;--blue:#60a5fa;--orange:#fb923c;--green:#34d399;--red:#f87171;--purple:#a78bfa;--gold:#facc15;--magenta:#f472b6;--umber:#c4a487;box-shadow:inset 0 0 0 1px var(--line)}
+.dsp-card{--paper:light-dark(#fff,#1c1c1f);--ink:light-dark(#1c1e22,#f2f2f4);--muted:light-dark(#6b7280,#a1a1aa);--line:light-dark(#e4e6ea,#2b2b30);--meter:light-dark(#eceef2,#2a2a2f);--hover:light-dark(#f1f3f6,#26262a);--blue:light-dark(#2563eb,#60a5fa);--orange:light-dark(#ea580c,#fb923c);--green:light-dark(#059669,#34d399);--red:light-dark(#dc2626,#f87171);--purple:light-dark(#7c3aed,#a78bfa);--gold:light-dark(#a16207,#facc15);--magenta:light-dark(#db2777,#f472b6);--umber:light-dark(#92745c,#c4a487);
+  order:-2;flex:1 0 100%;box-sizing:border-box;min-width:0;margin:0 0 8px;padding:10px 12px;border-radius:14px;background:var(--paper);color:var(--ink);box-shadow:0 1px 2px light-dark(#0000000f,#0000),0 4px 16px light-dark(#00000008,#0000),inset 0 0 0 1px light-dark(#0000,#2b2b30);font-size:12px;line-height:1.35;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:9px}
 :has(>[data-slot="sidebar.footer.action"]>.dsp-card){flex-wrap:wrap}
 .dsp-head{display:flex;align-items:center;gap:6px;min-width:0;margin:-2px -4px -2px 0;font-size:11px;color:var(--muted)}
 .dsp-head b{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--ink);font-size:12px;font-weight:600}
