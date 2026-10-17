@@ -4,7 +4,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
-import { createElement as h, useEffect, useId, useRef, useState } from 'react'
+import { createElement as h, useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   duration,
   engineMetric,
@@ -282,7 +282,6 @@ export function parseAddress(text: string): string | undefined {
 const css = `
 .dsp-card{--paper:light-dark(#fff,#1c1c1f);--ink:light-dark(#1c1e22,#f2f2f4);--muted:light-dark(#6b7280,#a1a1aa);--line:light-dark(#e4e6ea,#2b2b30);--meter:light-dark(#eceef2,#2a2a2f);--hover:light-dark(#f1f3f6,#26262a);--blue:light-dark(#2563eb,#60a5fa);--orange:light-dark(#ea580c,#fb923c);--green:light-dark(#059669,#34d399);--red:light-dark(#dc2626,#f87171);--purple:light-dark(#7c3aed,#a78bfa);--gold:light-dark(#a16207,#facc15);--magenta:light-dark(#db2777,#f472b6);--umber:light-dark(#92745c,#c4a487);
   order:-2;flex:1 0 100%;box-sizing:border-box;min-width:0;margin:0 0 8px;padding:10px 12px;border-radius:14px;background:var(--paper);color:var(--ink);box-shadow:0 1px 2px light-dark(#0000000f,#0000),0 4px 16px light-dark(#00000008,#0000),inset 0 0 0 1px light-dark(#0000,#2b2b30);font-size:12px;line-height:1.35;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;gap:9px}
-:has(>[data-slot="sidebar.footer.action"]>.dsp-card){flex-wrap:wrap}
 .dsp-head{display:flex;align-items:center;gap:6px;min-width:0;margin:-2px -4px -2px 0;font-size:11px;color:var(--muted)}
 .dsp-head b{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--ink);font-size:12px;font-weight:600}
 .dsp-head>span{white-space:nowrap}
@@ -414,6 +413,26 @@ const readCollapsed = () => {
   }
 }
 
+function useOwnRow() {
+  const release = useRef<() => void>()
+  return useCallback((card: HTMLDivElement | null) => {
+    release.current?.()
+    release.current = undefined
+    let row = card?.parentElement
+    while (row && getComputedStyle(row).display === 'contents') row = row.parentElement
+    if (!row) return
+    const { display, flexDirection } = getComputedStyle(row)
+    if (!display.endsWith('flex') || flexDirection !== 'row') return
+    const { style } = row
+    const before = [style.getPropertyValue('flex-wrap'), style.getPropertyPriority('flex-wrap')] as const
+    style.setProperty('flex-wrap', 'wrap')
+    release.current = () => {
+      const stillOurs = style.getPropertyValue('flex-wrap') === 'wrap' && style.getPropertyPriority('flex-wrap') === ''
+      if (stillOurs) style.setProperty('flex-wrap', ...before)
+    }
+  }, [])
+}
+
 interface Injected {
   hooks: { settings: HostObservable<ConfigFormSnapshot<{ url: string }>> }
 }
@@ -423,6 +442,7 @@ type CardProps = PropsRuntime<'sidebar.footer.action'> & PropsLocale<'spark-scop
 function Glance({ t }: Pick<CardProps, 't'>) {
   const { state, samples, error, at } = usePoll()
   const [collapsed, setCollapsed] = useState(readCollapsed)
+  const ownRow = useOwnRow()
   const toggle = () => {
     setCollapsed(!collapsed)
     try {
@@ -432,7 +452,8 @@ function Glance({ t }: Pick<CardProps, 't'>) {
 
   // `unset` reaches here only on a page that cannot read the settings; the host has no address either.
   if (error === 'unset' || (state === null && error === null)) return null
-  if (error === 'invalid') return h('div', { className: 'dsp-card' }, h('div', { className: 'dsp-note' }, t('invalid')))
+  if (error === 'invalid')
+    return h('div', { className: 'dsp-card', ref: ownRow }, h('div', { className: 'dsp-note' }, t('invalid')))
 
   const v = viewInference(state)
   const live = v?.ok ? v : null
@@ -478,7 +499,7 @@ function Glance({ t }: Pick<CardProps, 't'>) {
       chevron(),
     ),
   )
-  if (collapsed) return h('div', { className: 'dsp-card', 'data-collapsed': '' }, head)
+  if (collapsed) return h('div', { className: 'dsp-card', 'data-collapsed': '', ref: ownRow }, head)
 
   const coverage = (field: MetricKey) => {
     const partial = rateCoverage(servers, field)
@@ -528,7 +549,7 @@ function Glance({ t }: Pick<CardProps, 't'>) {
 
   return h(
     'div',
-    { className: 'dsp-card' },
+    { className: 'dsp-card', ref: ownRow },
     head,
     needsKey && h('div', { className: 'dsp-note' }, t('apiKey')),
     (decode.shown || prefill.shown) &&
